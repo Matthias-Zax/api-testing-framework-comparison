@@ -75,6 +75,13 @@ jobs:
         k6 run k6/store-performance.js --out json=k6-report/results.json
         k6 run k6/store-playwright-converted.js --out json=k6-report/converted-results.json
 
+    # Generate K6 HTML report
+    - name: Generate K6 HTML report
+      run: |
+        npm install k6-html-reporter -g
+        k6-html-reporter --jsonFile k6-report/results.json --output k6-report/results-report
+        k6-html-reporter --jsonFile k6-report/converted-results.json --output k6-report/converted-results-report
+
     # Create combined report directory
     - name: Create combined report
       if: always()
@@ -117,7 +124,12 @@ jobs:
             
             <div class='section'>
                 <h2>K6 Performance Tests</h2>
-                <iframe src='./k6-report/results.html'></iframe>
+                <div class="k6-reports">
+                    <h3>Store Performance Test</h3>
+                    <iframe src='./k6-report/results-report/index.html'></iframe>
+                    <h3>Store Playwright Converted Test</h3>
+                    <iframe src='./k6-report/converted-results-report/index.html'></iframe>
+                </div>
             </div>
         </body>
         </html>" > combined-report/index.html
