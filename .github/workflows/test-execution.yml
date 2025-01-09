@@ -1,0 +1,147 @@
+name: API Test Execution
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-execution:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    # Setup Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    # Setup Java
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+        cache: 'maven'
+
+    # Install K6
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    # Install dependencies
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    # Run Playwright tests
+    - name: Run Playwright tests
+      run: npx playwright test
+      
+    # Upload Playwright report
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
+
+    # Run SuperTest tests
+    - name: Run SuperTest tests
+      run: npm run test:supertest
+
+    # Run Java tests
+    - name: Run REST Assured tests
+      run: |
+        cd java-api-tests
+        mvn clean test
+
+    # Upload REST Assured report
+    - name: Upload REST Assured report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: rest-assured-report
+        path: java-api-tests/target/surefire-reports/
+        retention-days: 30
+
+    # Run K6 Performance tests and generate HTML report
+    - name: Run K6 tests
+      run: |
+        mkdir -p k6-report
+        k6 run k6/store-performance.js --out json=k6-report/results.json
+        k6 run k6/store-playwright-converted.js --out json=k6-report/converted-results.json
+
+    # Upload K6 report
+    - name: Upload K6 report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: k6-report
+        path: k6-report/
+        retention-days: 30
+
+    # Generate combined HTML report
+    - name: Create combined report
+      if: always()
+      run: |
+        echo "<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Test Execution Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+                h2 { color: #333; }
+                .status-pass { color: green; }
+                .status-fail { color: red; }
+                iframe { width: 100%; height: 600px; border: none; }
+            </style>
+        </head>
+        <body>
+            <h1>Test Execution Report</h1>
+            
+            <div class='section'>
+                <h2>Playwright Tests</h2>
+                <iframe src='./playwright-report/index.html'></iframe>
+            </div>
+            
+            <div class='section'>
+                <h2>REST Assured Tests</h2>
+                <iframe src='./rest-assured-report/index.html'></iframe>
+            </div>
+            
+            <div class='section'>
+                <h2>K6 Performance Tests</h2>
+                <iframe src='./k6-report/results.html'></iframe>
+            </div>
+        </body>
+        </html>" > test-report.html
+
+    # Upload combined report
+    - name: Upload combined report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: combined-report
+        path: test-report.html
+        retention-days: 30
+
+    # Publish combined report to GitHub Pages
+    - name: Deploy report to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+        publish_branch: gh-pages
+        keep_files: true

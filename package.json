@@ -1,0 +1,26 @@
+{
+  "name": "api-testing-framework-comparison",
+  "version": "1.0.0",
+  "description": "A comprehensive comparison of popular API testing frameworks (Playwright, SuperTest, REST Assured) with performance testing using K6. Includes real-world examples, CI/CD integration, and detailed reporting.",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "test:playwright": "playwright test",
+    "test:supertest": "jest --verbose",
+    "test:k6": "k6 run",
+    "test:k6:store": "k6 run k6/store-performance.js",
+    "test:k6:converted": "k6 run k6/store-playwright-converted.js",
+    "test:all": "npm run test:playwright && npm run test:supertest && npm run test:k6:store && npm run test:k6:converted"
+  },
+  "keywords": [],
+  "author": "",
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.5",
+    "@types/supertest": "^6.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5"
+  }
+}
