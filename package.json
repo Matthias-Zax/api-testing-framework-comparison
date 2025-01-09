@@ -12,19 +12,6 @@
     "test:k6:converted": "k6 run k6/store-playwright-converted.js",
     "test:all": "npm run test:playwright && npm run test:supertest && npm run test:k6:store && npm run test:k6:converted"
   },
-  "jest": {
-    "reporters": [
-      "default",
-      [
-        "jest-html-reporter",
-        {
-          "pageTitle": "SuperTest API Test Report",
-          "outputPath": "test-report.html",
-          "includeFailureMsg": true
-        }
-      ]
-    ]
-  },
   "keywords": [],
   "author": "",
   "devDependencies": {

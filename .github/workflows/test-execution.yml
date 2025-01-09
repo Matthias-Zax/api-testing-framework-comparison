@@ -60,9 +60,7 @@ jobs:
       
     # Run SuperTest tests
     - name: Run SuperTest tests
-      run: |
-        npm install jest-html-reporter
-        npm run test:supertest -- --reporters=default --reporters=jest-html-reporter
+      run: npm run test:supertest
 
     # Run Java tests
     - name: Run REST Assured tests
