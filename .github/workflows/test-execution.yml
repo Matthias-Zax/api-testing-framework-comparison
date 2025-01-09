@@ -7,6 +7,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Add permissions for the github-actions bot
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   test-execution:
     runs-on: ubuntu-latest
