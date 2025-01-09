@@ -166,102 +166,107 @@ jobs:
     - name: Create combined report
       if: always()
       run: |
-        mkdir -p combined-report
+        mkdir -p reports
         # Copy Playwright report if it exists
         if [ -d "playwright-report" ]; then
-          cp -r playwright-report combined-report/
+          cp -r playwright-report reports/
         else
-          mkdir -p combined-report/playwright-report
-          echo "<html><body><h1>No Playwright report available</h1></body></html>" > combined-report/playwright-report/index.html
+          mkdir -p reports/playwright-report
+          echo "<html><body><h1>No Playwright report available</h1></body></html>" > reports/playwright-report/index.html
         fi
         
         # Copy REST Assured report if it exists
         if [ -d "java-api-tests/target/surefire-reports" ]; then
-          mkdir -p combined-report/rest-assured-report
-          cp -r java-api-tests/target/surefire-reports/* combined-report/rest-assured-report/
+          mkdir -p reports/rest-assured-report
+          cp -r java-api-tests/target/surefire-reports/* reports/rest-assured-report/
         else
-          mkdir -p combined-report/rest-assured-report
-          echo "<html><body><h1>No REST Assured report available</h1></body></html>" > combined-report/rest-assured-report/index.html
+          mkdir -p reports/rest-assured-report
+          echo "<html><body><h1>No REST Assured report available</h1></body></html>" > reports/rest-assured-report/index.html
         fi
         
         # Copy K6 report if it exists
         if [ -d "k6-report" ]; then
-          cp -r k6-report combined-report/
+          cp -r k6-report reports/
         else
-          mkdir -p combined-report/k6-report
-          echo "<html><body><h1>No K6 report available</h1></body></html>" > combined-report/k6-report/index.html
+          mkdir -p reports/k6-report
+          echo "<html><body><h1>No K6 report available</h1></body></html>" > reports/k6-report/index.html
         fi
         
         # Copy SuperTest report if it exists
         if [ -f "test-report.html" ]; then
-          cp test-report.html combined-report/supertest-report.html
+          cp test-report.html reports/supertest-report.html
         else
-          echo "<html><body><h1>No SuperTest report available</h1></body></html>" > combined-report/supertest-report.html
+          echo "<html><body><h1>No SuperTest report available</h1></body></html>" > reports/supertest-report.html
         fi
         
-        echo "<!DOCTYPE html>
+        # Create index.html
+        echo '<!DOCTYPE html>
         <html>
         <head>
-            <title>Test Execution Report</title>
+            <title>API Testing Framework Comparison - Test Reports</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; }
-                .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-                h2 { color: #333; }
-                .status-pass { color: green; }
-                .status-fail { color: red; }
+                .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
                 iframe { width: 100%; height: 600px; border: none; }
-                .k6-reports h3 { margin-top: 20px; color: #666; }
+                h1, h2, h3 { color: #333; }
             </style>
         </head>
         <body>
-            <h1>Test Execution Report</h1>
+            <h1>API Testing Framework Comparison - Test Reports</h1>
             
-            <div class='section'>
-                <h2>Playwright Tests</h2>
-                <iframe src='./playwright-report/index.html'></iframe>
-            </div>
-
-            <div class='section'>
-                <h2>SuperTest Tests</h2>
-                <iframe src='./supertest-report.html'></iframe>
+            <div class="section">
+                <h2>Playwright API Tests</h2>
+                <iframe src="./playwright-report/index.html"></iframe>
             </div>
             
-            <div class='section'>
+            <div class="section">
+                <h2>SuperTest API Tests</h2>
+                <iframe src="./supertest-report.html"></iframe>
+            </div>
+            
+            <div class="section">
                 <h2>REST Assured Tests</h2>
-                <iframe src='./rest-assured-report/index.html'></iframe>
+                <iframe src="./rest-assured-report/index.html"></iframe>
             </div>
             
-            <div class='section'>
+            <div class="section">
                 <h2>K6 Performance Tests</h2>
                 <div class="k6-reports">
                     <h3>Store Performance Test</h3>
-                    <iframe src='./k6-report/results.html'></iframe>
+                    <iframe src="./k6-report/results.html"></iframe>
                     <h3>Store Playwright Converted Test</h3>
-                    <iframe src='./k6-report/converted-results.html'></iframe>
+                    <iframe src="./k6-report/converted-results.html"></iframe>
                 </div>
             </div>
         </body>
-        </html>" > combined-report/index.html
+        </html>' > reports/index.html
 
-    # Upload combined report as artifact
-    - name: Upload combined report artifact
+    # Upload reports as artifacts
+    - name: Upload reports
       uses: actions/upload-artifact@v3
-      if: always()
       with:
-        name: combined-report
-        path: combined-report/
-        retention-days: 30
+        name: test-reports
+        path: reports/
+        if-no-files-found: error
 
-    # Upload artifact for GitHub Pages
-    - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v2
-      with:
-        path: 'combined-report'
-        
-    # Configure and deploy GitHub Pages
+    # Configure GitHub Pages
     - name: Setup Pages
       uses: actions/configure-pages@v3
-        
+
+    # Upload GitHub Pages artifact
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: reports/
+
+    # Deploy to GitHub Pages
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v2
+
+    # Add summary with links
+    - name: Add links to summary
+      run: |
+        echo "## 📊 Test Reports" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Reports on GitHub Pages](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Download Reports Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
