@@ -45,8 +45,10 @@ jobs:
         sudo apt-get install k6
 
     # Install dependencies
-    - name: Install Node.js dependencies
-      run: npm ci
+    - name: Install dependencies
+      run: |
+        npm install
+        npm install -g k6
 
     # Install Playwright Chromium browser
     - name: Install Playwright Chromium
