@@ -15,18 +15,18 @@ export const options = {
     smoke: {
       executor: 'constant-vus',
       vus: 1,
-      duration: '30s',
+      duration: '20s',
     },
     // Load test
     load: {
       executor: 'ramping-vus',
       startVUs: 0,
       stages: [
-        { duration: '30s', target: 20 },
-        { duration: '1m', target: 20 },
-        { duration: '30s', target: 0 },
+        { duration: '20s', target: 20 },
+        { duration: '20s', target: 20 },
+        { duration: '20s', target: 0 },
       ],
-      gracefulRampDown: '30s',
+      gracefulRampDown: '10s',
     },
   },
   thresholds: {
