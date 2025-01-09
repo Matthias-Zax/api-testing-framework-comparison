@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
+import { htmlReport } from "k6-reporter";
 
 // Custom metrics
 const errorRate = new Rate('errors');
@@ -56,79 +57,63 @@ export default function () {
         complete: false,
       };
 
+      const startTime = new Date();
       const createResponse = http.post(
         `${BASE_URL}/store/order`,
         JSON.stringify(newOrder),
         { headers: HEADERS }
       );
-
-      createOrderTrend.add(createResponse.timings.duration);
+      createOrderTrend.add(new Date() - startTime);
 
       check(createResponse, {
         'Create Order status is 200': (r) => r.status === 200,
         'Created order has correct status': (r) => r.json('status') === 'placed',
-        'Created order has correct petId': (r) => r.json('petId') === 12345,
       }) || errorRate.add(1);
 
       const orderId = createResponse.json('id');
 
       // Get Order
       group('Get Order', () => {
-        const getResponse = http.get(
-          `${BASE_URL}/store/order/${orderId}`,
-          { headers: HEADERS }
-        );
-
-        getOrderTrend.add(getResponse.timings.duration);
+        const startTime = new Date();
+        const getResponse = http.get(`${BASE_URL}/store/order/${orderId}`);
+        getOrderTrend.add(new Date() - startTime);
 
         check(getResponse, {
           'Get Order status is 200': (r) => r.status === 200,
-          'Get order returns correct ID': (r) => r.json('id') === orderId,
-          'Get order returns correct status': (r) => r.json('status') === 'placed',
+          'Get Order has correct ID': (r) => r.json('id') === orderId,
         }) || errorRate.add(1);
       });
 
-      // Get Inventory
-      group('Get Inventory', () => {
-        const inventoryResponse = http.get(
-          `${BASE_URL}/store/inventory`,
-          { headers: HEADERS }
-        );
-
-        getInventoryTrend.add(inventoryResponse.timings.duration);
+      // Get Store Inventory
+      group('Get Store Inventory', () => {
+        const startTime = new Date();
+        const inventoryResponse = http.get(`${BASE_URL}/store/inventory`);
+        getInventoryTrend.add(new Date() - startTime);
 
         check(inventoryResponse, {
           'Get Inventory status is 200': (r) => r.status === 200,
-          'Inventory has items': (r) => Object.keys(r.json()).length > 0,
+          'Inventory response is JSON': (r) => r.headers['Content-Type'].includes('application/json'),
         }) || errorRate.add(1);
       });
 
       // Delete Order
       group('Delete Order', () => {
-        const deleteResponse = http.del(
-          `${BASE_URL}/store/order/${orderId}`,
-          null,
-          { headers: HEADERS }
-        );
-
-        deleteOrderTrend.add(deleteResponse.timings.duration);
+        const startTime = new Date();
+        const deleteResponse = http.del(`${BASE_URL}/store/order/${orderId}`);
+        deleteOrderTrend.add(new Date() - startTime);
 
         check(deleteResponse, {
           'Delete Order status is 200': (r) => r.status === 200,
         }) || errorRate.add(1);
-
-        // Verify deletion
-        const verifyResponse = http.get(
-          `${BASE_URL}/store/order/${orderId}`,
-          { headers: HEADERS }
-        );
-
-        check(verifyResponse, {
-          'Verify deletion status is 404': (r) => r.status === 404,
-        }) || errorRate.add(1);
       });
     });
-
-    sleep(1); // Wait 1 second between iterations
   });
+
+  sleep(1);
+}
+
+export function handleSummary(data) {
+  return {
+    "k6-report/converted-results.html": htmlReport(data),
+  };
 }

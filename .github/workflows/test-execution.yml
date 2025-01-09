@@ -72,8 +72,8 @@ jobs:
     - name: Run K6 tests
       run: |
         mkdir -p k6-report
-        k6 run k6/store-performance.js --out json=k6-report/results.json
-        k6 run k6/store-playwright-converted.js --out json=k6-report/converted-results.json
+        k6 run k6/store-performance.js
+        k6 run k6/store-playwright-converted.js
 
     # Generate K6 HTML report
     - name: Generate K6 HTML report
@@ -87,10 +87,38 @@ jobs:
       if: always()
       run: |
         mkdir -p combined-report
-        cp -r playwright-report combined-report/
-        cp -r java-api-tests/target/surefire-reports combined-report/rest-assured-report
-        cp -r k6-report combined-report/
-        [ -f "test-report.html" ] && cp test-report.html combined-report/supertest-report.html || echo "SuperTest report not found"
+        # Copy Playwright report if it exists
+        if [ -d "playwright-report" ]; then
+          cp -r playwright-report combined-report/
+        else
+          mkdir -p combined-report/playwright-report
+          echo "<html><body><h1>No Playwright report available</h1></body></html>" > combined-report/playwright-report/index.html
+        fi
+        
+        # Copy REST Assured report if it exists
+        if [ -d "java-api-tests/target/surefire-reports" ]; then
+          mkdir -p combined-report/rest-assured-report
+          cp -r java-api-tests/target/surefire-reports/* combined-report/rest-assured-report/
+        else
+          mkdir -p combined-report/rest-assured-report
+          echo "<html><body><h1>No REST Assured report available</h1></body></html>" > combined-report/rest-assured-report/index.html
+        fi
+        
+        # Copy K6 report if it exists
+        if [ -d "k6-report" ]; then
+          cp -r k6-report combined-report/
+        else
+          mkdir -p combined-report/k6-report
+          echo "<html><body><h1>No K6 report available</h1></body></html>" > combined-report/k6-report/index.html
+        fi
+        
+        # Copy SuperTest report if it exists
+        if [ -f "test-report.html" ]; then
+          cp test-report.html combined-report/supertest-report.html
+        else
+          echo "<html><body><h1>No SuperTest report available</h1></body></html>" > combined-report/supertest-report.html
+        fi
+        
         echo "<!DOCTYPE html>
         <html>
         <head>
@@ -102,6 +130,7 @@ jobs:
                 .status-pass { color: green; }
                 .status-fail { color: red; }
                 iframe { width: 100%; height: 600px; border: none; }
+                .k6-reports h3 { margin-top: 20px; color: #666; }
             </style>
         </head>
         <body>
@@ -126,9 +155,9 @@ jobs:
                 <h2>K6 Performance Tests</h2>
                 <div class="k6-reports">
                     <h3>Store Performance Test</h3>
-                    <iframe src='./k6-report/results-report/index.html'></iframe>
+                    <iframe src='./k6-report/results.html'></iframe>
                     <h3>Store Playwright Converted Test</h3>
-                    <iframe src='./k6-report/converted-results-report/index.html'></iframe>
+                    <iframe src='./k6-report/converted-results.html'></iframe>
                 </div>
             </div>
         </body>

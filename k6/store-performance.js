@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate } from 'k6/metrics';
+import { htmlReport } from "k6-reporter";
 
 const errorRate = new Rate('errors');
 
@@ -49,7 +50,7 @@ export default function () {
   
   check(getResponse, {
     'Get Order status is 200': (r) => r.status === 200,
-    'Get order returns correct ID': (r) => r.json('id') === orderId,
+    'Get Order has correct ID': (r) => r.json('id') === orderId,
   }) || errorRate.add(1);
 
   // Get store inventory
@@ -75,4 +76,10 @@ export default function () {
   }) || errorRate.add(1);
 
   sleep(1); // Wait 1 second between iterations
+}
+
+export function handleSummary(data) {
+  return {
+    "k6-report/results.html": htmlReport(data),
+  };
 }
