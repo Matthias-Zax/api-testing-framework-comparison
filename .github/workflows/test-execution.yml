@@ -58,7 +58,9 @@ jobs:
       
     # Run SuperTest tests
     - name: Run SuperTest tests
-      run: npm run test:supertest
+      run: |
+        npm install jest-html-reporter
+        npm run test:supertest -- --reporters=default --reporters=jest-html-reporter
 
     # Run Java tests
     - name: Run REST Assured tests
@@ -81,6 +83,7 @@ jobs:
         cp -r playwright-report combined-report/
         cp -r java-api-tests/target/surefire-reports combined-report/rest-assured-report
         cp -r k6-report combined-report/
+        [ -f "test-report.html" ] && cp test-report.html combined-report/supertest-report.html || echo "SuperTest report not found"
         echo "<!DOCTYPE html>
         <html>
         <head>
@@ -100,6 +103,11 @@ jobs:
             <div class='section'>
                 <h2>Playwright Tests</h2>
                 <iframe src='./playwright-report/index.html'></iframe>
+            </div>
+
+            <div class='section'>
+                <h2>SuperTest Tests</h2>
+                <iframe src='./supertest-report.html'></iframe>
             </div>
             
             <div class='section'>
