@@ -72,15 +72,95 @@ jobs:
     - name: Run K6 tests
       run: |
         mkdir -p k6-report
-        k6 run k6/store-performance.js
-        k6 run k6/store-playwright-converted.js
+        k6 run k6/store-performance.js --out json=k6-report/results.json
+        k6 run k6/store-playwright-converted.js --out json=k6-report/converted-results.json
 
     # Generate K6 HTML report
     - name: Generate K6 HTML report
       run: |
-        npm install k6-html-reporter -g
-        k6-html-reporter --jsonFile k6-report/results.json --output k6-report/results-report
-        k6-html-reporter --jsonFile k6-report/converted-results.json --output k6-report/converted-results-report
+        echo '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>K6 Performance Test Results</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .metrics { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+                .metric { margin: 10px 0; }
+                .pass { color: green; }
+                .fail { color: red; }
+            </style>
+        </head>
+        <body>
+            <h1>Store Performance Test Results</h1>
+            <div class="metrics">
+                <pre id="results"></pre>
+            </div>
+            <script>
+                fetch("results.json")
+                    .then(response => response.json())
+                    .then(data => {
+                        const metrics = data.metrics;
+                        const html = Object.entries(metrics)
+                            .map(([key, value]) => {
+                                const avg = value.values?.avg || "N/A";
+                                const p95 = value.values?.p95 || "N/A";
+                                return `
+                                    <div class="metric">
+                                        <h3>${key}</h3>
+                                        <p>Average: ${avg}</p>
+                                        <p>95th percentile: ${p95}</p>
+                                    </div>
+                                `;
+                            })
+                            .join("");
+                        document.getElementById("results").innerHTML = html;
+                    });
+            </script>
+        </body>
+        </html>' > k6-report/results.html
+
+        echo '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>K6 Performance Test Results (Converted)</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .metrics { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+                .metric { margin: 10px 0; }
+                .pass { color: green; }
+                .fail { color: red; }
+            </style>
+        </head>
+        <body>
+            <h1>Store Performance Test Results (Converted)</h1>
+            <div class="metrics">
+                <pre id="results"></pre>
+            </div>
+            <script>
+                fetch("converted-results.json")
+                    .then(response => response.json())
+                    .then(data => {
+                        const metrics = data.metrics;
+                        const html = Object.entries(metrics)
+                            .map(([key, value]) => {
+                                const avg = value.values?.avg || "N/A";
+                                const p95 = value.values?.p95 || "N/A";
+                                return `
+                                    <div class="metric">
+                                        <h3>${key}</h3>
+                                        <p>Average: ${avg}</p>
+                                        <p>95th percentile: ${p95}</p>
+                                    </div>
+                                `;
+                            })
+                            .join("");
+                        document.getElementById("results").innerHTML = html;
+                    });
+            </script>
+        </body>
+        </html>' > k6-report/converted-results.html
 
     # Create combined report directory
     - name: Create combined report
