@@ -56,15 +56,6 @@ jobs:
     - name: Run Playwright tests
       run: npx playwright test
       
-    # Upload Playwright report
-    - name: Upload Playwright report
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-
     # Run SuperTest tests
     - name: Run SuperTest tests
       run: npm run test:supertest
@@ -75,15 +66,6 @@ jobs:
         cd java-api-tests
         mvn clean test
 
-    # Upload REST Assured report
-    - name: Upload REST Assured report
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: rest-assured-report
-        path: java-api-tests/target/surefire-reports/
-        retention-days: 30
-
     # Run K6 Performance tests and generate HTML report
     - name: Run K6 tests
       run: |
@@ -91,19 +73,14 @@ jobs:
         k6 run k6/store-performance.js --out json=k6-report/results.json
         k6 run k6/store-playwright-converted.js --out json=k6-report/converted-results.json
 
-    # Upload K6 report
-    - name: Upload K6 report
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: k6-report
-        path: k6-report/
-        retention-days: 30
-
-    # Generate combined HTML report
+    # Create combined report directory
     - name: Create combined report
       if: always()
       run: |
+        mkdir -p combined-report
+        cp -r playwright-report combined-report/
+        cp -r java-api-tests/target/surefire-reports combined-report/rest-assured-report
+        cp -r k6-report combined-report/
         echo "<!DOCTYPE html>
         <html>
         <head>
@@ -135,25 +112,26 @@ jobs:
                 <iframe src='./k6-report/results.html'></iframe>
             </div>
         </body>
-        </html>" > test-report.html
+        </html>" > combined-report/index.html
 
-    # Upload combined report
-    - name: Upload combined report
+    # Upload combined report as artifact
+    - name: Upload combined report artifact
       uses: actions/upload-artifact@v3
       if: always()
       with:
         name: combined-report
-        path: test-report.html
+        path: combined-report/
         retention-days: 30
 
-    # Publish combined report to GitHub Pages
-    - name: Setup Pages
-      uses: actions/configure-pages@v3
-      
-    - name: Upload artifact
+    # Upload artifact for GitHub Pages
+    - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v2
       with:
-        path: '.'
+        path: 'combined-report'
+        
+    # Configure and deploy GitHub Pages
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
         
     - name: Deploy to GitHub Pages
       id: deployment
